@@ -1,0 +1,69 @@
+query_templates: []
+remote_schemas: []
+tables:
+  - array_relationships:
+      - comment: null
+        name: orders
+        using:
+          foreign_key_constraint_on:
+            column: status
+            table: order
+    delete_permissions: []
+    event_triggers: []
+    insert_permissions: []
+    object_relationships: []
+    select_permissions: []
+    table: order_status
+    update_permissions: []
+  - array_relationships: []
+    delete_permissions: []
+    event_triggers: []
+    insert_permissions: []
+    object_relationships: []
+    select_permissions: []
+    table: order
+    update_permissions: []
+  - array_relationships:
+      - comment: null
+        name: toppings
+        using:
+          foreign_key_constraint_on:
+            column: pizza_id
+            table: pizza_topping
+    delete_permissions: []
+    event_triggers: []
+    insert_permissions: []
+    object_relationships: []
+    select_permissions: []
+    table: pizza
+    update_permissions: []
+  - array_relationships:
+      - comment: null
+        name: pizzas
+        using:
+          foreign_key_constraint_on:
+            column: topping_id
+            table: pizza_topping
+    delete_permissions: []
+    event_triggers: []
+    insert_permissions: []
+    object_relationships: []
+    select_permissions: []
+    table: topping
+    update_permissions: []
+  - array_relationships: []
+    delete_permissions: []
+    event_triggers: []
+    insert_permissions: []
+    object_relationships:
+      - comment: null
+        name: pizza
+        using:
+          foreign_key_constraint_on: pizza_id
+      - comment: null
+        name: topping
+        using:
+          foreign_key_constraint_on: topping_id
+    select_permissions: []
+    table: pizza_topping
+    update_permissions: []

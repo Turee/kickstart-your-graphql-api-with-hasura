@@ -1,0 +1,31 @@
+version: "3.6"
+services:
+  postgres:
+    image: postgres
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    ports:
+      - "5444:5432"
+    environment:
+      POSTGRES_PASSWORD: abuz1seo9Ielohtoh5highou
+  graphql-engine:
+    image: hasura/graphql-engine:v1.0.0-alpha34
+    ports:
+      - "8080:8080"
+    depends_on:
+      - "postgres"
+    environment:
+      HASURA_GRAPHQL_DATABASE_URL: postgres://postgres:abuz1seo9Ielohtoh5highou@postgres:5432/postgres
+      HASURA_GRAPHQL_ENABLE_CONSOLE: "true" # set to "false" to disable console
+      ## uncomment next line to set an access key
+      HASURA_GRAPHQL_ACCESS_KEY: supersecretkey
+      HASURA_GRAPHQL_JWT_SECRET: '{"type": "RS512", "key": "-----BEGIN CERTIFICATE-----\nMIIDCzCCAfOgAwIBAgIJb+LFV9adGBYKMA0GCSqGSIb3DQEBCwUAMCMxITAfBgNV\nBAMTGHRlc3QtcGl6emEtYXBpLmF1dGgwLmNvbTAeFw0xOTAxMTcxOTM0NDZaFw0z\nMjA5MjUxOTM0NDZaMCMxITAfBgNVBAMTGHRlc3QtcGl6emEtYXBpLmF1dGgwLmNv\nbTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAKD7deuqNHjj2d+9yKHy\nxdODIC8Z0H477DrYP2pne/4PjF7oazVoBss1f8MuAEiMLoLdq/cIFKk33fo7t89H\ni+fxkZnep9ivtOaFbQR4smJxqROEfiJpgZmJwtOBV9LBotF7I6tPYoG/MlshU6s7\n/pe6O0t4mho9aRRYF+0tL8YH/nuWJe8wRdDis+uT0UtiAy1scjKI6gCqFTySft3y\ne+03sgHlWy5tfG+wxm4OIwau1+ojf5s+h0MHVkv9goYuwvlptsYZGbRY1S31LwP2\nEBsG8D6o9ZPg0PWX9wKyAVkJDb7KrWaC2CoIP6SeSajhhTkwE6PbtuGjhXTi+gTo\nHaUCAwEAAaNCMEAwDwYDVR0TAQH/BAUwAwEB/zAdBgNVHQ4EFgQUC8vEOaDObhop\nAPu3k8Blkpxy57cwDgYDVR0PAQH/BAQDAgKEMA0GCSqGSIb3DQEBCwUAA4IBAQAe\nFZMBklXnYT1rqEfyy0q7SLDuYvt/nfT2pVTx28acby3Y04nFuMDXXxBqJ9lkkcKJ\nR6u7QO6zx/WPKgfl0+KU8fKGptnqN+lnipKYyPIjx7+H4ky8sW7aJsQeBEBiRrZX\nRZpmB1lT4Gb5PUjVN2nv3f7RpSHCmH2vu4WpK/vCKfCiBpihfiOprmHLWyeJLF/B\nB13iDGfHWY86FuALYo0S63ZfYnU7YZJfdofks0mi8+zhAgu+CUFVu7DdZfaPIOJo\n7DG77MADY89ks6ygN99Qd2uQ5FtJMeuWzM30EN+AOTyyhsKcacxiNFQRgtjz9Q3X\nv3Az0P/7vjM7ydNl/wjJ\n-----END CERTIFICATE-----\n"}'
+  order:
+    build: services/order
+    depends_on:
+      - "postgres"
+    environment:
+      DATABASE_URL: postgres://postgres:abuz1seo9Ielohtoh5highou@postgres:5432/postgres
+      PORT: 80
+volumes:
+  db_data:

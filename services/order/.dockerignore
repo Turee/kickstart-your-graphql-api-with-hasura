@@ -1,0 +1,10 @@
+k8s/
+node_modules/
+.forge/
+.idea/
+dist/
+test/
+.env
+.env.local
+junit.xml
+yarn-error.log
