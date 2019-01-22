@@ -12,7 +12,7 @@ In today's software world you need to balance between future proofing, features,
 
 Everyone loves pizza, so let's see how we can implement a backend system for a fictional pizzeria using Hasura, PostgreSQL, Auth0 and one Koa microservice.
 
-The code found in this post can be also found from GITHUB_LINK_HERE. I will referer to files found in the repository later. If you want to run the code examples you will need [hasura cli](https://docs.hasura.io/1.0/graphql/manual/hasura-cli/index.html#installation), [docker](https://www.docker.com/) and [docker-compose](https://docs.docker.com/compose/). Installed.
+The code found in this post can be also found from [here](https://github.com/Turee/kickstart-your-graphql-api-with-hasura). I will referer to files found in the repository later. If you want to run the code examples you will need [hasura cli](https://docs.hasura.io/1.0/graphql/manual/hasura-cli/index.html#installation), [docker](https://www.docker.com/) and [docker-compose](https://docs.docker.com/compose/) installed.
 
 The requirements are as follows:
 
@@ -20,11 +20,11 @@ The requirements are as follows:
 - Allow customers to receive updates to their order.
 - Employees must have a dashboard where they can see a list of all active orders. Dashboard must be real time.
 
-Let's fire up the system found in DOCKER_COMPOSE_LINK_HERE.
+Let's start by firing up the system found in the [docker-compose.yml](https://github.com/Turee/kickstart-your-graphql-api-with-hasura/blob/master/docker-compose.yml) .
 
 ### Database
 
-Let's start by creating the database (migrations/1547751385993_initial-tables.up.sql):
+Let's migrate the database found in the [migration file](https://github.com/Turee/kickstart-your-graphql-api-with-hasura/blob/master/migrations/1547751385993_initial-tables.up.sql):
 
 ```sql
 CREATE TABLE topping (
@@ -91,7 +91,7 @@ hasura metadata export
 
 This generates a file (migrations/metadata.yaml) that contains all the metadata about the database. I like to add this file in the git with the related database migrations so we can easilly keep track of changes to the database using git.
 
-We can later apply the metadata by (ie. when deploying the changes to a different environment) :
+We can later apply the metadata by (ie. when deploying the changes to a different environment):
 
 ```
 hasura metadata apply
@@ -105,7 +105,7 @@ Hasura has an excellent [tutorial](https://docs.hasura.io/1.0/graphql/manual/gui
 
 1. Create auth0 account, tenant and application.
 2. Use [this tool](https://hasura.io/jwt-config) to create a JWT config.
-3. Pass the JWT config as environment variable `HASURA_GRAPHQL_JWT_SECRET` as seen in the DOCKER_COMPOSE_LINK_HERE .
+3. Pass the JWT config as environment variable `HASURA_GRAPHQL_JWT_SECRET` as seen in the [docker-compose.yml](https://github.com/Turee/kickstart-your-graphql-api-with-hasura/blob/master/docker-compose.yml) .
 
 That was simple enough 😅.
 
