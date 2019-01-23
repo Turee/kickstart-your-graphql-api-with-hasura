@@ -185,7 +185,9 @@ You still have to implement some business logic in your backend. With Hasura you
 
     It seems that there are couple of programming language extension for Postgres: [plv8](https://github.com/plv8/plv8) V8 javascript engine, [pgmoon](https://github.com/leafo/pgmoon) and [PL/Java](https://tada.github.io/pljava/). These solutions will probably have their own limitations.
 
-2.  **Webhook callbacks.** In Hasura, it's possible to add [webhooks](https://hasura.io/event-triggers) that react to database events. This allows you to do some async business logic like sending notifications and updating search indices, etc. You can even use [Hasura subscriptions](https://docs.hasura.io/1.0/graphql/manual/subscriptions/index.html) to listen for changes. We could have used this pattern in our pizza-api as well. We could have added a webhook callback to our microservice, which would have updated the database row (ie. payment status). Client would have received the update through a GraphQL subscription.
+2.  **Webhook callbacks.** In Hasura, it's possible to add [webhooks](https://hasura.io/event-triggers) that react to database events. This allows you to do some async business logic like sending notifications or updating search indices. You can use [subscriptions](https://docs.hasura.io/1.0/graphql/manual/subscriptions/index.html) to keep the client up to date.
+
+    We could have used this pattern in our pizza-api as well. We could have added a webhook callback to our microservice, which would have updated the database row (ie. payment status). Client would have received the update through a GraphQL subscription.
 
 3.  **GraphQL Schema Stitching.** This is what we used in the example. This approach allows full control of the endpoint implementation. You can for example return an error if some side effect fails.
 
