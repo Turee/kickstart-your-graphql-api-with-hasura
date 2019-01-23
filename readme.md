@@ -2,29 +2,25 @@
 
 ## TL;DR;
 
-Hasura can accelerate backend development by automating the implementation of simple CRUD endpoints. Business logic can be implemented using remote schemas, webhooks and database triggers/functions.
+Hasura can accelerate backend development by automating the implementation of simple CRUD endpoints. Business logic can still be implemented using remote schemas, webhooks and database triggers/functions.
 
 ## Introduction
 
-In today's software world you need to balance between future proofing, features, quality and budget. In this post we are going to discuss how to kickstart your backend project into steep upwards trajectory without compromising too much on future maintainability of your system. We are going to find out how to dodge the CRUD boilerplate and still have a room to implement possibly complex business logic. Let's do this by implementing a backend system for a fictional pizzeria and discuss the results at the end.
-
-## Pizza API implementation
-
-Everyone loves pizza, so let's see how we can implement a backend system for a fictional pizzeria using Hasura, PostgreSQL, Auth0 and one Koa microservice.
+Software projects are all about using your available development time most efficiently. In this post we are going to explore how we can save time on our backend endpoints by using Hasura GraphQL engine. We will do this by implementing a backend system for our fictional pizzeria. Finally, we will discuss the implementation.
 
 The code found in this post can be also found from [here](https://github.com/Turee/kickstart-your-graphql-api-with-hasura). I will referer to files found in the repository later. If you want to run the code examples you will need [hasura cli](https://docs.hasura.io/1.0/graphql/manual/hasura-cli/index.html#installation), [docker](https://www.docker.com/) and [docker-compose](https://docs.docker.com/compose/) installed.
 
-The requirements are as follows:
+## Requirements
+
+Our requirements for the pizzeria-api are as follows:
 
 - Allow customers place orders.
 - Allow customers to receive updates to their order.
 - Employees must have a dashboard where they can see a list of all active orders. Dashboard must be real time.
 
-Let's start by firing up the system found in the [docker-compose.yml](https://github.com/Turee/kickstart-your-graphql-api-with-hasura/blob/master/docker-compose.yml) .
+## Implementation
 
-### Database
-
-Let's migrate the database found in the [migration file](https://github.com/Turee/kickstart-your-graphql-api-with-hasura/blob/master/migrations/1547751385993_initial-tables.up.sql):
+Let's start by firing up the system found in the [docker-compose.yml](https://github.com/Turee/kickstart-your-graphql-api-with-hasura/blob/master/docker-compose.yml). Next, let's migrate the database found in the [migration file](https://github.com/Turee/kickstart-your-graphql-api-with-hasura/blob/master/migrations/1547751385993_initial-tables.up.sql):
 
 ```sql
 CREATE TABLE topping (
@@ -65,7 +61,7 @@ CREATE TABLE "order" (
 CREATE INDEX ON "order"(status);
 ```
 
-Next we are going to apply migrations:
+Execute the migrations by using Hasura CLI:
 
 ```
 hasura migrate apply
@@ -73,25 +69,27 @@ hasura migrate apply
 
 ### Hasura metadata
 
-Next we are going to add some Hasura metadata using the Hasura console. First thing to do is to add tracking information for the tables by clicking "Add all":
+Next, we are going to add some Hasura metadata using the Hasura console. First thing to do is to add tracking information for the tables by clicking "Add all":
 
 ![](data_view.png)
 
-Hasura just generated a GraphQL CRUD API for us with filtering, aggregation and paging support.
+Hasura just generated a GraphQL CRUD API for us with subscriptions support. See all Hasura features [here](https://hasura.io/all-features).
 
 Next thing to do is to add relationship tracking information for each table:
 
 ![](relations.png)
 
-When we are done modifying metadata, let's save it to our Git repository so we can transfer our configuration to a different environment in the future:
+We can use following command to export our metadata:
 
 ```
 hasura metadata export
 ```
 
-This generates a file (migrations/metadata.yaml) that contains all the metadata about the database. I like to add this file in the git with the related database migrations so we can easilly keep track of changes to the database using git.
+This generates [a file](https://github.com/Turee/kickstart-your-graphql-api-with-hasura/blob/master/migrations/metadata.yaml) that contains all the metadata about the database.
 
-We can later apply the metadata by (ie. when deploying the changes to a different environment):
+I like to add this file and related database changes in the git repository. This enables us to apply our changes to another environment later.
+
+We apply this metadata using following command:
 
 ```
 hasura metadata apply
@@ -99,7 +97,7 @@ hasura metadata apply
 
 ### Authentication
 
-Let's use [Auth0](https://Auth0.com/) to get our user authentication/signup working quickly.
+Let's use [Auth0](https://Auth0.com/) to get our user authentication/signup working.
 
 Hasura has an excellent [tutorial](https://docs.hasura.io/1.0/graphql/manual/guides/integrations/auth0-jwt.html) for setting up Auth0. But for the impatient below is the TL;DR; version of the tutorial:
 
@@ -111,29 +109,29 @@ That was simple enough 😅.
 
 ### Authorization
 
-Next we are going to implement some access control. We don't want to allow users modify other peoples orders for example, that would be bad. To do this we are going to use Hasura console to generate the required metadata for the authorization.
+Next we are going to implement some access control. We don't want to allow users modify another user's orders for example, that would be bad. We are going to do this by using Hasura console to generate the required metadata.
 
 First, let's give the user permission to select his own orders. We will add a custom check that will validate that the `user_id` in the database row will match the `x-hasura-user-id` header.
 ![](order_select.png)
 
-Next, let's allow the user to select all pizzas and toppings (he probably want's to see a menu):
+Next, let's allow the user to select all pizzas and toppings (he probably wants to see a menu):
 ![](pizza_select.png)
 ![](pizza_topping_select.png)
 ![](topping_select.png)
 
 ### Order service
 
-We could allow the user to insert orders to the database and have Hasura to save the value of `x-hasura-user-id` header to order's `user_id` column and that would be it.
+We could allow the user to insert orders to the database. and have Hasura to save the value of `x-hasura-user-id` header to order's `user_id` column and that would be it.
 
-But in the real world we probably want to execute some business logic when the order is placed like sending emails, processing payments and such.
+But in the real world we want to execute some business logic when the user places an order. Such business logic can be sending emails, notifications, processing payments and such.
 
-We are going to implement a simple NodeJS application which expose a single GraphQL mutation called `createOrder` and we are going to glue the schema to the Hasura schema using Hasura's "Remote Schemas" feature:
+I have implemented a simple NodeJS application which exposes a single GraphQL mutation called `createOrder`. We can glue the schema to the Hasura schema using Hasura's "Remote Schemas" feature:
 
 ![](remote_schema.png)
 
-Now the NodeJS application will handle `createOrder` mutations and we have a place where we can implement all the business logic we want.
+The NodeJS application now handles the `createOrder` mutation. Also, we have a place where we can implement all the business logic we want.
 
-Source code for the NodeJS application can be found here: LINK_TO_THE_NODE_APP
+You can find the source code for the NodeJS application [here](https://github.com/Turee/kickstart-your-graphql-api-with-hasura/tree/master/services/order).
 
 ## Trying it out
 
@@ -167,26 +165,36 @@ Now we can list pizzas with following query (using user's credentials):
 
 Insert orders and watch changes to them!
 
-<a href="http://www.youtube.com/watch?feature=player_embedded&v=D5W2cyiaUSA" target="_blank"><img src="http://img.youtube.com/vi/D5W2cyiaUSA/0.jpg" alt="IMAGE ALT TEXT HERE" width="240" height="180" border="10" /></a>
+<a href="http://www.youtube.com/watch?feature=player_embedded&v=D5W2cyiaUSA" target="_blank"><img src="http://img.youtube.com/vi/D5W2cyiaUSA/0.jpg" alt="subscriptions demo" width="480" height="360" border="10" /></a>
 
 ## Discussion
 
-I have been kind of thinking about using a solution like Hasura to speed up the implementation of the backend. A big chunk of the backend implementation work is writing simple CRUD endpoints that we can easily generate with Hasura. This speed ups the implementation and allows more time to implement the actual business logic.
+We implemented the backend with relative ease. Let's discuss a couple of points we need to take into account:
 
-Hasura allows three methods to implement the business logic:
+**Performance**
+
+- Hasura is [fast](https://blog.hasura.io/architecture-of-a-high-performance-graphql-to-sql-server-58d9944b8a87).
+- You can scale horizontally (subscriptions are implemented by watching database tables directly).
+- Only limitation is the performance of your PostgreSQL instance. Yet, you need to have _a lot_ of concurrent users to saturate a single PostgreSQL instance on modern hardware.
+
+**Business logic**
+
+You still have to implement some business logic in your backend. With Hasura you have following options:
 
 1.  **Database triggers and functions.** You can implement business logic at some level directly into the database. However, with this option you are limited to the pretty verbose [PL/pgSQL](https://en.wikipedia.org/wiki/PL/pgSQL) programming language by default.
 
     It seems that there are couple of programming language extension for Postgres: [plv8](https://github.com/plv8/plv8) V8 javascript engine, [pgmoon](https://github.com/leafo/pgmoon) and [PL/Java](https://tada.github.io/pljava/). These solutions will probably have their own limitations.
 
-2.  **Webhook callbacks.** In Hasura, it's possible to add [webhooks](https://hasura.io/event-triggers) that react to database events. This allows you to do some async business logic like sending notifications and updating search indices, etc. You can even use [Hasura subscriptions](https://docs.hasura.io/1.0/graphql/manual/subscriptions/index.html) to listen for changes. This pattern would have worked with our pizza api as well: we could just have the client insert the "order" row with built in mutation and add a webhook trigger that calls an endpoint which processes the payment for the order, the changed state is pushed then to the client through the subscription.
+2.  **Webhook callbacks.** In Hasura, it's possible to add [webhooks](https://hasura.io/event-triggers) that react to database events. This allows you to do some async business logic like sending notifications and updating search indices, etc. You can even use [Hasura subscriptions](https://docs.hasura.io/1.0/graphql/manual/subscriptions/index.html) to listen for changes. We could have used this pattern in our pizza-api as well. We could have added a webhook callback to our microservice, which would have updated the database row (ie. payment status). Client would have received the update through a GraphQL subscription.
 
-3.  **GraphQL Schema Stitching.** This is what we used in the example. Implementing your own GraphQL mutations and queries allows for the most flexibility in your implementation, as you are implementing the actual endpoint that handles the API call.
+3.  **GraphQL Schema Stitching.** This is what we used in the example. This approach allows full control of the endpoint implementation. You can for example return an error if some side effect fails.
 
-Obviously, you don't need to stick with one of these solutions. You can combine them and use the solution that feels the least awkward.
+Ofcourse, you don't have to stick with one of these solutions. You can combine them and use the solution that feels the least awkward.
 
 ## Conclusion
 
-In my opinion Hasura definitely has it's uses in my future backend stacks. Nobody enjoys writing simple CRUD endpoints after all and i'm sure our clients will appreciate for not having to pay for work that can be automated. Automatic support for GraphQL subscriptions is pretty neat too, implementing real time apps becomes a breeze!
+I have thought about using some kind of CRUD generator in my backend stacks for a while. Hasura feels like a solid choice for accelerating your backend development. It has a solid code base written with Haskell (which i'm fan of). Haskell focuses on correctness, which will be an asset when implementing something like Hasura.
 
-Share your experiences in working with CRUD generators like Hasura in the comment section!
+Hasura definitely has it's uses in my future backend stacks. Nobody enjoys writing simple CRUD endpoints after all. I'm sure our clients will appreciate for not having to pay for work that can be automated.
+
+Added bonus is that you get to watch changes in the database using GraphQL subscriptions. This makes implementing real time apps a breeze!
