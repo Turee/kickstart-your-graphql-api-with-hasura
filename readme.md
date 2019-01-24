@@ -20,7 +20,15 @@ Our requirements for the pizzeria-api are as follows:
 
 ## Implementation
 
-Let's start by firing up the system found in the [docker-compose.yml](https://github.com/Turee/kickstart-your-graphql-api-with-hasura/blob/master/docker-compose.yml). Next, let's migrate the database found in the [migration file](https://github.com/Turee/kickstart-your-graphql-api-with-hasura/blob/master/migrations/1547751385993_initial-tables.up.sql):
+We will use Hasura GraphQL engine for the API implementation. To do this we will do the following:
+
+1. Create a PostgreSQL **database**
+2. Define some Hasura **metadata**
+3. Implement a micro service using NodeJS and use Hasura's **remote schema** feature
+
+### Database
+
+The database will be used to save all of our data. We will define the database with following script:
 
 ```sql
 CREATE TABLE topping (
@@ -61,7 +69,7 @@ CREATE TABLE "order" (
 CREATE INDEX ON "order"(status);
 ```
 
-Execute the migrations by using Hasura CLI:
+The migration file is located in the `migrations` directory of the example code. You can apply the migration by using following command:
 
 ```
 hasura migrate apply
@@ -69,35 +77,37 @@ hasura migrate apply
 
 ### Hasura metadata
 
-Next, we are going to add some Hasura metadata using the Hasura console. First thing to do is to add tracking information for the tables by clicking "Add all":
+Hasura metadata contains following information:
+
+- Tracked tables
+- Tracked relations
+- Authorization rules
+- Remote schemas
+- Webhook event handlers
+
+**Table tracking** means that Hasura will generate a GraphQL schema for the table that contains CRUD operations.
+
+**Relationship tracking** means that you can navigate the relations using the GraphQL schema. For example you might have a field called "toppings" in the pizza-type that when queried returns all the toppings related to the pizza.
+
+With **authorization rules** you can define role based access control for invidual columns. Rules can be either static or dynamic. Static rules just allow/deny access to specific columns. Dynamic rules allow/deny access based on an expression, for example if `user_id` column matches value of `x-hasura-user-id` header the access is granted.
+
+**Remote schemas** are GraphQL schemas that can be [stitched](https://blog.hasura.io/the-ultimate-guide-to-schema-stitching-in-graphql-f30178ac0072/) to the main schema. This will allow you to implement custom GraphQL types for your specific needs.
+
+**Webhook event handlers** allow you to add an endpoint that Hasura will call when something happens in the database.
+
+### Table tracking
+
+Let's instruct Hasura to track all tables by clicking "add all" .
 
 ![](data_view.png)
-
-Hasura just generated a GraphQL CRUD API for us with subscriptions support. See all Hasura features [here](https://hasura.io/all-features).
 
 Next thing to do is to add relationship tracking information for each table:
 
 ![](relations.png)
 
-We can use following command to export our metadata:
-
-```
-hasura metadata export
-```
-
-This generates [a file](https://github.com/Turee/kickstart-your-graphql-api-with-hasura/blob/master/migrations/metadata.yaml) that contains all the metadata about the database.
-
-I like to add this file and related database changes in the git repository. This enables us to apply our changes to another environment later.
-
-We apply this metadata using following command:
-
-```
-hasura metadata apply
-```
-
 ### Authentication
 
-Let's use [Auth0](https://Auth0.com/) to get our user authentication/signup working.
+Before we move to authorization, let's setup a quick authentication mechanism by using Let's use [Auth0](https://Auth0.com/).
 
 Hasura has an excellent [tutorial](https://docs.hasura.io/1.0/graphql/manual/guides/integrations/auth0-jwt.html) for setting up Auth0. But for the impatient below is the TL;DR; version of the tutorial:
 
@@ -105,11 +115,14 @@ Hasura has an excellent [tutorial](https://docs.hasura.io/1.0/graphql/manual/gui
 2. Use [this tool](https://hasura.io/jwt-config) to create a JWT config.
 3. Pass the JWT config as environment variable `HASURA_GRAPHQL_JWT_SECRET` as seen in the [docker-compose.yml](https://github.com/Turee/kickstart-your-graphql-api-with-hasura/blob/master/docker-compose.yml) .
 
-That was simple enough 😅.
+### Authorization rules
 
-### Authorization
+After setting up authentication we are going to implement some access control. We will do this by adding the authorization metadata using Hasura console.
 
-Next we are going to implement some access control. We don't want to allow users modify another user's orders for example, that would be bad. We are going to do this by using Hasura console to generate the required metadata.
+Our goal is to implement following access control for the `user` role:
+
+- User can see all the pizzas and toppings
+- User can see his own orders
 
 First, let's give the user permission to select his own orders. We will add a custom check that will validate that the `user_id` in the database row will match the `x-hasura-user-id` header.
 ![](order_select.png)
@@ -119,7 +132,7 @@ Next, let's allow the user to select all pizzas and toppings (he probably wants 
 ![](pizza_topping_select.png)
 ![](topping_select.png)
 
-### Order service
+### Remote schema
 
 We could allow the user to insert orders to the database. and have Hasura to save the value of `x-hasura-user-id` header to order's `user_id` column and that would be it.
 
@@ -133,9 +146,27 @@ The NodeJS application now handles the `createOrder` mutation. Also, we have a p
 
 You can find the source code for the NodeJS application [here](https://github.com/Turee/kickstart-your-graphql-api-with-hasura/tree/master/services/order).
 
+### Versioning the metadata
+
+At this point you might be thinking that we just saved a bunch of data into a database. How are we going to promote these changes from one environment to another?
+
+We can export the Hasura metadata by using following command:
+
+```
+hasura metadata export
+```
+
+This generates [a file](https://github.com/Turee/kickstart-your-graphql-api-with-hasura/blob/master/migrations/metadata.yaml) that contains all the metadata about the database. We can add this file to our Git repository which means that our metadata is now under version control 🎉.
+
+When we are ready to promote our metadata changes to another environment, we can do this with following command:
+
+```
+hasura metadata apply
+```
+
 ## Trying it out
 
-Let's add some pizzas:
+Let's try out our API. First we need to add some data to the database though:
 
 ```sql
 INSERT INTO topping (id, name) VALUES (1, 'Mozzarella cheese');
@@ -159,7 +190,7 @@ INSERT INTO pizza_topping (pizza_id, topping_id) VALUES (2, 1);
 INSERT INTO pizza_topping (pizza_id, topping_id) VALUES (2, 5);
 ```
 
-Now we can list pizzas with following query (using user's credentials):
+Now we can use a GraphQL client to list the pizzas with following query (using user's credentials):
 
 ![](list_pizzas.png)
 
@@ -167,14 +198,18 @@ Insert orders and watch changes to them!
 
 <a href="http://www.youtube.com/watch?feature=player_embedded&v=D5W2cyiaUSA" target="_blank"><img src="http://img.youtube.com/vi/D5W2cyiaUSA/0.jpg" alt="subscriptions demo" width="480" height="360" border="10" /></a>
 
+Looks like our API is ready for the frontend team 😎.
+
 ## Discussion
 
-We implemented the backend with relative ease. Let's discuss a couple of points we need to take into account:
+We implemented the backend with relative ease. Let's discuss a couple of points that might affect your decision to use Hasura.
 
 **Performance**
 
+As a backend engineer you are probably little worried how your system will perform under load. With Hasura you need to take following into account:
+
 - Hasura is [fast](https://blog.hasura.io/architecture-of-a-high-performance-graphql-to-sql-server-58d9944b8a87).
-- You can scale horizontally (subscriptions are implemented by watching database tables directly).
+- You can scale Hasura horizontally (subscriptions are implemented by watching database tables directly).
 - Only limitation is the performance of your PostgreSQL instance. Yet, you need to have _a lot_ of concurrent users to saturate a single PostgreSQL instance on modern hardware.
 
 **Business logic**
@@ -195,8 +230,6 @@ Ofcourse, you don't have to stick with one of these solutions. You can combine t
 
 ## Conclusion
 
-I have thought about using some kind of CRUD generator in my backend stacks for a while. Hasura feels like a solid choice for accelerating your backend development. It has a solid code base written with Haskell (which i'm fan of). Haskell focuses on correctness, which will be an asset when implementing something like Hasura.
+I have thought about using some kind of CRUD generator in my backend stacks for a while. Hasura feels like a solid choice for accelerating your backend development. It has a solid code base written with Haskell (which i'm fan of). Haskell focuses on correctness and performance, which are assets when implementing something like Hasura.
 
-Hasura definitely has it's uses in my future backend stacks. Nobody enjoys writing simple CRUD endpoints after all. I'm sure our clients will appreciate for not having to pay for work that can be automated.
-
-Added bonus is that you get to watch changes in the database using GraphQL subscriptions. This makes implementing real time apps a breeze!
+Hasura definitely has it's uses in my future backend stacks. Nobody enjoys writing simple CRUD endpoints after all. Also, i'm sure that our clients will appreciate not having to pay for work that can be automated.
